@@ -50,8 +50,15 @@ public class IndexModel : PageModel
         var output = new StringBuilder();
         output.AppendLine("ARCHIVO DE TOKENS - LENGUAJE OLLIN");
         output.AppendLine("===================================");
-        foreach (var line in Resultado.Tokens.GroupBy(token => token.Linea).OrderBy(group => group.Key))
-            output.AppendLine($"{line.Key}\t{string.Join(" ", line.Select(token => token.Codigo))}");
+        var sourceLines = GetSourceLines(Cadena);
+        for (var lineNumber = 1; lineNumber <= sourceLines.Length; lineNumber++)
+        {
+            var tokenCodes = Resultado.Tokens
+                .Where(token => token.Linea == lineNumber)
+                .Select(token => token.Codigo)
+                .ToArray();
+            output.AppendLine($"{lineNumber}\t{(tokenCodes.Length > 0 ? string.Join(" ", tokenCodes) : "SIN TOKENS")}");
+        }
 
         output.AppendLine();
         output.AppendLine("TABLA DE SÍMBOLOS");
@@ -81,4 +88,9 @@ public class IndexModel : PageModel
         TotalTransiciones = await db.Transiciones.CountAsync();
         Proveedor = configuration["DatabaseProvider"] ?? "Sqlite";
     }
+
+    private static string[] GetSourceLines(string source) => source
+        .Replace("\r\n", "\n")
+        .Replace('\r', '\n')
+        .Split('\n');
 }

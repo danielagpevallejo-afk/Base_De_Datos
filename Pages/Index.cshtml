@@ -2,6 +2,10 @@
 @model IndexModel
 @{
     ViewData["Title"] = "Analizador léxico";
+    var sourceLineCount = (Model.Cadena ?? "")
+        .Replace("\r\n", "\n")
+        .Replace('\r', '\n')
+        .Split('\n').Length;
 }
 
 <section class="hero">
@@ -25,6 +29,7 @@
     <form method="post" id="validator-form" class="validator-form">
         <label asp-for="Cadena">Programa fuente</label>
         <div class="source-editor-wrap">
+            <pre id="source-line-numbers" class="source-line-numbers" aria-hidden="true">@string.Join("\n", Enumerable.Range(1, sourceLineCount))</pre>
             <textarea asp-for="Cadena" id="cadena" rows="5" autocomplete="off" spellcheck="false" placeholder="Ejemplo: START = VARIABLE&#10;AND _DANY2_" autofocus></textarea>
         </div>
         <input type="file" id="program-file" accept=".txt,text/plain" hidden />
@@ -61,32 +66,33 @@
             <div><span class="eyebrow">Salida del analizador</span><h2>Archivo de tokens</h2></div>
             <span class="route-count">@Model.Resultado.Tokens.Count tokens</span>
         </div>
-        @if (Model.Resultado.Tokens.Count > 0)
-        {
-            <div class="token-output-wrap">
-                <table class="token-output-table">
-                    <thead><tr><th>Línea</th><th>Tokens resultantes</th></tr></thead>
-                    <tbody>
-                    @foreach (var line in Model.Resultado.Tokens.GroupBy(token => token.Linea).OrderBy(group => group.Key))
-                    {
-                        <tr>
-                            <td>@line.Key</td>
-                            <td>
-                                @foreach (var token in line)
+        <div class="token-output-wrap">
+            <table class="token-output-table">
+                <thead><tr><th>Línea</th><th>Tokens resultantes</th></tr></thead>
+                <tbody>
+                @for (var lineNumber = 1; lineNumber <= sourceLineCount; lineNumber++)
+                {
+                    var tokensForLine = Model.Resultado.Tokens.Where(token => token.Linea == lineNumber).ToList();
+                    <tr>
+                        <td>@lineNumber</td>
+                        <td>
+                            @if (tokensForLine.Count == 0)
+                            {
+                                <span class="token-code token-code-empty">SIN TOKENS</span>
+                            }
+                            else
+                            {
+                                @foreach (var token in tokensForLine)
                                 {
                                     <span class="token-code @(!token.Valido ? "token-code-error" : "")" title="@token.Lexema">@token.Codigo</span>
                                 }
-                            </td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
-            </div>
-        }
-        else
-        {
-            <p class="inline-empty">No se encontraron tokens en el programa fuente.</p>
-        }
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
         <div class="save-actions">
             @if (Model.Resultado.Valido)
             {

@@ -5,6 +5,7 @@ Aplicación web ASP.NET Core para **.NET 7** que carga en una base SQL las trans
 La interfaz genera:
 
 - Archivo de tokens con el código reconocido para cada lexema.
+- Correspondencia exacta entre las líneas del programa fuente y las del archivo de tokens, conservando líneas vacías como `SIN TOKENS`.
 - Tabla de recorrido detallada, reiniciando cada token en `q0`.
 - Tabla de símbolos con identificadores únicos (`ID01`, `ID02`, etc.).
 - Lista de errores con línea y columna, sin detener el análisis posterior.
