@@ -46,4 +46,7 @@ app.MapRazorPages();
 app.MapGet("/api/validar/{cadena}", async (string cadena, AutomataService automata) =>
     Results.Ok(await automata.ValidarAsync(cadena)));
 
+app.MapGet("/api/analizar", async (string fuente, AutomataService automata) =>
+    Results.Ok(await automata.AnalizarAsync(fuente)));
+
 app.Run();

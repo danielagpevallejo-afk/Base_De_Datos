@@ -22,7 +22,7 @@ public class IndexModel : PageModel
     [BindProperty]
     public string Cadena { get; set; } = "";
 
-    public ValidationResult? Resultado { get; private set; }
+    public AnalysisResult? Resultado { get; private set; }
     public int TotalEstados { get; private set; }
     public int TotalTransiciones { get; private set; }
     public string Proveedor { get; private set; } = "";
@@ -31,7 +31,7 @@ public class IndexModel : PageModel
 
     public async Task OnPostAsync()
     {
-        Resultado = await automata.ValidarAsync(Cadena);
+        Resultado = await automata.AnalizarAsync(Cadena);
         await LoadStatsAsync();
     }
 

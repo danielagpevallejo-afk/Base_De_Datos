@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OllinLexer.Data;
+using OllinLexer.Models;
 
 namespace OllinLexer.Services;
 
@@ -14,10 +15,81 @@ public sealed class AutomataService
     public async Task<ValidationResult> ValidarAsync(string? input)
     {
         input ??= "";
-        var states = (await db.Estados.AsNoTracking().ToListAsync()).ToDictionary(e => e.Id, StringComparer.Ordinal);
+        var automaton = await LoadAutomatonAsync();
+        return ValidateLexeme(input, automaton.States, automaton.Graph);
+    }
+
+    public async Task<AnalysisResult> AnalizarAsync(string? source)
+    {
+        source ??= "";
+        var automaton = await LoadAutomatonAsync();
+        var tokens = new List<TokenAnalysis>();
+        var symbols = new List<SymbolEntry>();
+        var errors = new List<LexicalError>();
+        var symbolIds = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var lexeme in Tokenize(source))
+        {
+            var result = ValidateLexeme(lexeme.Text, automaton.States, automaton.Graph);
+            var code = result.Token;
+
+            if (result.Valida && result.Token == "IDENTIFICADOR")
+            {
+                if (!symbolIds.TryGetValue(lexeme.Text, out code))
+                {
+                    code = $"ID{symbolIds.Count + 1:00}";
+                    symbolIds.Add(lexeme.Text, code);
+                    symbols.Add(new SymbolEntry(code, lexeme.Text, "—", "—", lexeme.Line));
+                }
+            }
+
+            var token = new TokenAnalysis(
+                tokens.Count + 1,
+                lexeme.Line,
+                lexeme.Column,
+                lexeme.Text,
+                result.Valida,
+                result.Categoria,
+                result.Valida ? code : "ERROR",
+                result.Recorrido,
+                result.Pasos);
+            tokens.Add(token);
+
+            if (!result.Valida)
+            {
+                errors.Add(new LexicalError(
+                    lexeme.Line,
+                    lexeme.Column,
+                    lexeme.Text,
+                    ErrorDescription(lexeme.Text, result)));
+            }
+        }
+
+        var valid = errors.Count == 0 && tokens.Count > 0;
+        var message = tokens.Count == 0
+            ? "Escribe al menos un token para comenzar el análisis."
+            : errors.Count == 0
+                ? $"Análisis completado: {tokens.Count} token(es) reconocidos."
+                : $"Análisis terminado con {errors.Count} error(es) léxico(s); los demás tokens sí fueron procesados.";
+
+        return new AnalysisResult(source, valid, message, tokens, symbols, errors);
+    }
+
+    private async Task<AutomatonData> LoadAutomatonAsync()
+    {
+        var states = (await db.Estados.AsNoTracking().ToListAsync())
+            .ToDictionary(e => e.Id, StringComparer.Ordinal);
         var transitionRows = await db.Transiciones.AsNoTracking().Include(t => t.Simbolo).ToListAsync();
         var graph = transitionRows.GroupBy(t => (t.EstadoOrigenId, t.Simbolo.Valor))
             .ToDictionary(g => g.Key, g => g.Select(t => t.EstadoDestinoId).Distinct(StringComparer.Ordinal).ToArray());
+        return new AutomatonData(states, graph);
+    }
+
+    private static ValidationResult ValidateLexeme(
+        string input,
+        IReadOnlyDictionary<string, Estado> states,
+        IReadOnlyDictionary<(string State, string Symbol), string[]> graph)
+    {
 
         var active = new HashSet<string>(StringComparer.Ordinal) { InitialState };
         var steps = new List<ValidationStep>();
@@ -52,6 +124,77 @@ public sealed class AutomataService
                 : $"{input}: NO VÁLIDO (no termina en un estado de aceptación)";
         var route = InitialState + " → " + string.Join(" → ", steps.Select(s => s.EstadoNuevo));
         return new ValidationResult(input, valid, category, token, message, route, errorPosition, steps);
+    }
+
+    private static IEnumerable<SourceLexeme> Tokenize(string source)
+    {
+        var index = 0;
+        var line = 1;
+        var column = 1;
+        var pairedSymbols = new HashSet<string>(StringComparer.Ordinal) { ">=", "<=", "<>", "==", "//" };
+        while (index < source.Length)
+        {
+            var character = source[index];
+            if (character == '\r')
+            {
+                index++;
+                if (index < source.Length && source[index] == '\n') index++;
+                line++;
+                column = 1;
+                continue;
+            }
+            if (character == '\n')
+            {
+                index++;
+                line++;
+                column = 1;
+                continue;
+            }
+            if (char.IsWhiteSpace(character))
+            {
+                index++;
+                column++;
+                continue;
+            }
+
+            var start = index;
+            var startColumn = column;
+            if (IsWordCharacter(character))
+            {
+                while (index < source.Length && IsWordCharacter(source[index]))
+                {
+                    index++;
+                    column++;
+                }
+            }
+            else if (index + 1 < source.Length && pairedSymbols.Contains(source.Substring(index, 2)))
+            {
+                index += 2;
+                column += 2;
+            }
+            else
+            {
+                index++;
+                column++;
+            }
+
+            var text = source.Substring(start, index - start);
+            yield return new SourceLexeme(text, line, startColumn);
+        }
+    }
+
+    private static bool IsWordCharacter(char character) =>
+        character is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '_';
+
+    private static string ErrorDescription(string lexeme, ValidationResult result)
+    {
+        if (lexeme.All(char.IsDigit))
+            return "Constante numérica no reconocida por el autómata actual.";
+        if (lexeme.Length > 0 && char.IsDigit(lexeme[0]))
+            return "Un identificador no puede comenzar con un dígito.";
+        return result.PosicionError is null
+            ? "El token no termina en un estado de aceptación."
+            : $"Token no reconocido; falla en su carácter {result.PosicionError}.";
     }
 
     private static HashSet<string> Advance(IEnumerable<string> active, IEnumerable<string> symbols,
@@ -96,4 +239,9 @@ public sealed class AutomataService
         _ when token.StartsWith("CE", StringComparison.Ordinal) => "Carácter especial",
         "IDENTIFICADOR" => "Identificador", "COMENTARIO" => "Comentario", _ => token
     };
+
+    private sealed record SourceLexeme(string Text, int Line, int Column);
+    private sealed record AutomatonData(
+        IReadOnlyDictionary<string, Estado> States,
+        IReadOnlyDictionary<(string State, string Symbol), string[]> Graph);
 }
