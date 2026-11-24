@@ -31,8 +31,10 @@
         <div class="source-actions">
             <button type="button" id="load-program" class="secondary-action">Cargar programa</button>
             <button type="button" id="edit-program" class="secondary-action">Editar programa</button>
-            <button type="submit" class="primary-action">Guardar programa</button>
-            <span id="program-status" class="program-status" aria-live="polite">Escribe o carga un archivo .txt</span>
+            <button type="submit" class="primary-action">Verificar programa</button>
+            <span id="program-status" class="program-status" aria-live="polite">
+                @(Model.Resultado is null ? "Escribe o carga un archivo .txt" : Model.Resultado.Valido ? "Programa verificado: listo para guardar" : "Corrige los errores antes de guardar")
+            </span>
         </div>
     </form>
     <div class="examples" aria-label="Ejemplos rápidos">
@@ -61,30 +63,50 @@
         </div>
         @if (Model.Resultado.Tokens.Count > 0)
         {
-            <div class="token-stream">
-                @foreach (var token in Model.Resultado.Tokens)
-                {
-                    <div class="token-pill @(!token.Valido ? "token-error" : "")"><span>@token.Numero</span><code>@token.Codigo</code><small>@token.Lexema</small></div>
-                }
+            <div class="token-output-wrap">
+                <table class="token-output-table">
+                    <thead><tr><th>Línea</th><th>Tokens resultantes</th></tr></thead>
+                    <tbody>
+                    @foreach (var line in Model.Resultado.Tokens.GroupBy(token => token.Linea).OrderBy(group => group.Key))
+                    {
+                        <tr>
+                            <td>@line.Key</td>
+                            <td>
+                                @foreach (var token in line)
+                                {
+                                    <span class="token-code @(!token.Valido ? "token-code-error" : "")" title="@token.Lexema">@token.Codigo</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
             </div>
         }
         else
         {
             <p class="inline-empty">No se encontraron tokens en el programa fuente.</p>
         }
-        <form method="post" asp-page-handler="DescargarTokens" class="token-download-form">
-            <input type="hidden" asp-for="Cadena" id="download-source" />
+        <div class="save-actions">
             @if (Model.Resultado.Valido)
             {
-                <button type="submit" id="download-tokens" class="download-action">Guardar archivo de tokens (.txt)</button>
-                <small id="download-help">El programa no contiene errores. El archivo está listo para guardarse.</small>
+                <form method="post" asp-page-handler="DescargarPrograma">
+                    <input type="hidden" name="Cadena" value="@Model.Cadena" data-source-copy />
+                    <button type="submit" id="save-program" class="download-action" data-save-button>Guardar programa fuente (.txt)</button>
+                </form>
+                <form method="post" asp-page-handler="DescargarTokens">
+                    <input type="hidden" name="Cadena" value="@Model.Cadena" data-source-copy />
+                    <button type="submit" id="download-tokens" class="download-action" data-save-button>Guardar archivo de tokens (.txt)</button>
+                </form>
+                <small id="download-help">Verificación terminada: 0 errores. Ambos archivos están listos.</small>
             }
             else
             {
-                <button type="button" id="download-tokens" class="download-action" disabled>Guardar archivo de tokens (.txt)</button>
-                <small id="download-help">Corrige todos los errores y vuelve a guardar el programa para habilitar la descarga.</small>
+                <button type="button" id="save-program" class="download-action" data-save-button disabled>Guardar programa fuente (.txt)</button>
+                <button type="button" id="download-tokens" class="download-action" data-save-button disabled>Guardar archivo de tokens (.txt)</button>
+                <small id="download-help">Corrige todos los errores y vuelve a verificar para habilitar ambos archivos.</small>
             }
-        </form>
+        </div>
     </section>
 
     @if (Model.ArchivoMensaje is not null)

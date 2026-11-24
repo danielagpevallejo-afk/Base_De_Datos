@@ -4,17 +4,17 @@ const fileInput = document.querySelector("#program-file");
 const loadButton = document.querySelector("#load-program");
 const editButton = document.querySelector("#edit-program");
 const programStatus = document.querySelector("#program-status");
-const downloadSource = document.querySelector("#download-source");
-const downloadButton = document.querySelector("#download-tokens");
 const downloadHelp = document.querySelector("#download-help");
 
 function markProgramAsEdited(message = "Cambios sin validar") {
-  if (downloadSource) downloadSource.value = sourceEditor.value;
-  if (downloadButton) {
-    downloadButton.disabled = true;
-    downloadButton.type = "button";
-  }
-  if (downloadHelp) downloadHelp.textContent = "Guarda y valida nuevamente el programa para habilitar la descarga.";
+  document.querySelectorAll("[data-source-copy]").forEach((input) => {
+    input.value = sourceEditor.value;
+  });
+  document.querySelectorAll("[data-save-button]").forEach((button) => {
+    button.disabled = true;
+    button.type = "button";
+  });
+  if (downloadHelp) downloadHelp.textContent = "Verifica nuevamente el programa para habilitar ambas descargas.";
   if (programStatus) {
     programStatus.textContent = message;
     programStatus.classList.add("dirty");
@@ -46,8 +46,8 @@ fileInput?.addEventListener("change", async () => {
   }
 
   sourceEditor.value = await file.text();
-  markProgramAsEdited(`${file.name} cargado; falta guardar y validar`);
-  sourceEditor.focus();
+  markProgramAsEdited(`${file.name} cargado; verificando...`);
+  validatorForm.requestSubmit();
 });
 
 editButton?.addEventListener("click", () => {

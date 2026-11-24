@@ -9,6 +9,7 @@ La interfaz genera:
 - Tabla de símbolos con identificadores únicos (`ID01`, `ID02`, etc.).
 - Lista de errores con línea y columna, sin detener el análisis posterior.
 - Carga y edición de programas `.txt`, con descarga del archivo de tokens únicamente cuando no existen errores léxicos.
+- La carga de un programa inicia su verificación automáticamente; con cero errores se habilitan por separado la descarga del programa fuente y la del archivo de tokens.
 
 ## Ejecutar
 

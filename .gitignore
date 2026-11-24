@@ -14,3 +14,7 @@ obj/
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Artefactos generados localmente
+output/
+tmp/

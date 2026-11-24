@@ -62,6 +62,19 @@ public class IndexModel : PageModel
         return File(Encoding.UTF8.GetBytes(output.ToString()), "text/plain; charset=utf-8", "archivo_tokens.txt");
     }
 
+    public async Task<IActionResult> OnPostDescargarProgramaAsync()
+    {
+        Resultado = await automata.AnalizarAsync(Cadena);
+        if (!Resultado.Valido)
+        {
+            ArchivoMensaje = "No se puede guardar el programa fuente mientras existan errores léxicos.";
+            await LoadStatsAsync();
+            return Page();
+        }
+
+        return File(Encoding.UTF8.GetBytes(Cadena), "text/plain; charset=utf-8", "programa_ollin.txt");
+    }
+
     private async Task LoadStatsAsync()
     {
         TotalEstados = await db.Estados.CountAsync();
