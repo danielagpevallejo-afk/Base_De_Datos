@@ -1,0 +1,7 @@
+namespace OllinLexer.Models;
+
+public sealed class Simbolo
+{
+    public int Id { get; set; }
+    public string Valor { get; set; } = "";
+}

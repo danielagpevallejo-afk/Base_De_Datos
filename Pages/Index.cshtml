@@ -1,0 +1,78 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Analizador léxico";
+}
+
+<section class="hero">
+    <div>
+        <span class="eyebrow">Lenguaje OLLIN</span>
+        <h1>Analizador léxico</h1>
+        <p>Valida cadenas con el autómata de <strong>q0 a q239</strong> y consulta las transiciones almacenadas en SQL.</p>
+    </div>
+    <div class="database-status" aria-label="Estado de la base de datos">
+        <span class="status-dot"></span>
+        <div><strong>Base conectada</strong><small>@Model.Proveedor · @Model.TotalEstados estados · @Model.TotalTransiciones transiciones</small></div>
+    </div>
+</section>
+
+<section class="validator-card">
+    <div class="instructions">
+        <h2>Escribe una cadena</h2>
+        <p>Se reconocen palabras reservadas, operadores lógicos, relacionales y aritméticos, identificadores y caracteres especiales.</p>
+        <p class="rule"><strong>Identificador:</strong> comienza con A–Z o <code>_</code>, continúa con letras, dígitos o guiones bajos y termina con letra o guion bajo.</p>
+    </div>
+    <form method="post" id="validator-form" class="validator-form">
+        <label asp-for="Cadena">Cadena para analizar</label>
+        <div class="input-row">
+            <input asp-for="Cadena" id="cadena" autocomplete="off" spellcheck="false" placeholder="Ejemplo: START, VARIABLE, >=, AND" autofocus />
+            <button type="submit">Validar cadena</button>
+        </div>
+    </form>
+    <div class="examples" aria-label="Ejemplos rápidos">
+        <span>Probar:</span>
+        @foreach (var example in new[] { "START", "VARIABLE", "VAR", "AND", ">=", "VAR_1_A_" })
+        {
+            <button type="button" class="example-chip" data-example="@example">@example</button>
+        }
+    </div>
+</section>
+
+@if (Model.Resultado is not null)
+{
+    <section class="result-card @(Model.Resultado.Valida ? "valid" : "invalid")" aria-live="polite">
+        <div class="result-icon">@(Model.Resultado.Valida ? "✓" : "×")</div>
+        <div>
+            <p class="result-title">@Model.Resultado.Mensaje</p>
+            <p class="result-meta"><span>@Model.Resultado.Categoria</span><code>@Model.Resultado.Token</code></p>
+        </div>
+    </section>
+    <section class="route-card">
+        <div class="section-heading">
+            <div><span class="eyebrow">Ejecución del AFND</span><h2>Recorrido de estados</h2></div>
+            <span class="route-count">@Model.Resultado.Pasos.Count pasos</span>
+        </div>
+        <div class="route-line">@Model.Resultado.Recorrido</div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Paso</th><th>Carácter</th><th>Tipo</th><th>Estado anterior</th><th>Estado nuevo</th></tr></thead>
+                <tbody>
+                @foreach (var step in Model.Resultado.Pasos)
+                {
+                    <tr class="@(step.EstadoNuevo == "q179" ? "error-row" : "")">
+                        <td>@step.Paso</td><td><code>@step.Caracter</code></td><td>@step.Tipo</td>
+                        <td><code>@step.EstadoAnterior</code></td><td><code>@step.EstadoNuevo</code></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+else
+{
+    <section class="empty-state">
+        <div class="empty-orbit">q0</div>
+        <div><h2>El recorrido aparecerá aquí</h2><p>La tabla mostrará cada carácter, su tipo y todos los estados activos.</p></div>
+    </section>
+}

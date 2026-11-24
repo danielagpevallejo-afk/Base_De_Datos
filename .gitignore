@@ -1,0 +1,16 @@
+.vs/
+bin/
+obj/
+
+# Archivos temporales de SQLite
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Configuración local
+*.user
+*.suo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
