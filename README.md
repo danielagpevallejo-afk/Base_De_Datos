@@ -32,3 +32,5 @@ La configuración predeterminada usa SQLite y crea automáticamente `ollin-autom
 La semilla proviene de `Data/Seed/transiciones.csv`. El programa conserva simultáneamente la ruta de palabra reservada y la de identificador; si ambas aceptan, la palabra reservada tiene prioridad.
 
 Por ejemplo, `VAR` se clasifica como palabra reservada, mientras que `VARIABLE` se clasifica como identificador y se agrega a la tabla de símbolos. El autómata actual no incluye constantes numéricas, por lo que un lexema como `10` se reporta como error léxico.
+
+Los identificadores pueden usar letras mayúsculas o minúsculas y guion bajo. También se aceptan identificadores de un solo carácter (`A` o `_`); pueden contener dígitos, pero no terminar con uno.

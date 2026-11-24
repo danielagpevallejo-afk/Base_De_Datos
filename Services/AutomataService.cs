@@ -212,13 +212,14 @@ public sealed class AutomataService
     private static IEnumerable<string> InputSymbols(char character)
     {
         if (character is >= 'A' and <= 'Z') return new[] { character.ToString(), "LET" };
+        if (character is >= 'a' and <= 'z') return new[] { "LET" };
         if (character is >= '0' and <= '9') return new[] { "DIG" };
         return new[] { character.ToString() };
     }
 
     private static string CharacterType(char character) => character switch
     {
-        >= 'A' and <= 'Z' => "Letra", >= '0' and <= '9' => "Dígito", '_' => "Guion bajo",
+        >= 'A' and <= 'Z' or >= 'a' and <= 'z' => "Letra", >= '0' and <= '9' => "Dígito", '_' => "Guion bajo",
         _ when "><=+-*/;@#$%^&(){}]:\"'.?".Contains(character) => "Símbolo", _ => "Otro"
     };
 

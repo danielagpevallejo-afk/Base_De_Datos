@@ -30,7 +30,11 @@ public static class DatabaseSeeder
     public static async Task InitializeAsync(AutomataDbContext db, string contentRoot)
     {
         await db.Database.EnsureCreatedAsync();
-        if (await db.Estados.AnyAsync()) return;
+        if (await db.Estados.AnyAsync())
+        {
+            await EnsureIdentifierRulesAsync(db);
+            return;
+        }
 
         var csvPath = Path.Combine(contentRoot, "Data", "Seed", "transiciones.csv");
         var rows = File.ReadLines(csvPath, Encoding.UTF8).Skip(1)
@@ -62,6 +66,56 @@ public static class DatabaseSeeder
         {
             EstadoOrigenId = r.From, SimboloId = symbolIds[r.Symbol], EstadoDestinoId = r.To
         }));
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task EnsureIdentifierRulesAsync(AutomataDbContext db)
+    {
+        var fdc = await db.Simbolos.SingleOrDefaultAsync(symbol => symbol.Valor == "FDC");
+        if (fdc is null)
+        {
+            fdc = new Simbolo { Valor = "FDC" };
+            db.Simbolos.Add(fdc);
+            await db.SaveChangesAsync();
+        }
+
+        var exists = await db.Transiciones.AnyAsync(transition =>
+            transition.EstadoOrigenId == "q175" &&
+            transition.SimboloId == fdc.Id &&
+            transition.EstadoDestinoId == "q178");
+        if (!exists)
+        {
+            db.Transiciones.Add(new Transicion
+            {
+                EstadoOrigenId = "q175",
+                SimboloId = fdc.Id,
+                EstadoDestinoId = "q178"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        await EnsureDigitContinuationAsync(db);
+    }
+
+    private static async Task EnsureDigitContinuationAsync(AutomataDbContext db)
+    {
+        var digit = await db.Simbolos.SingleAsync(symbol => symbol.Valor == "DIG");
+        var transition = await db.Transiciones.SingleOrDefaultAsync(item =>
+            item.EstadoOrigenId == "q175" && item.SimboloId == digit.Id);
+
+        if (transition is null)
+        {
+            db.Transiciones.Add(new Transicion
+            {
+                EstadoOrigenId = "q175",
+                SimboloId = digit.Id,
+                EstadoDestinoId = "q177"
+            });
+        }
+        else
+        {
+            transition.EstadoDestinoId = "q177";
+        }
         await db.SaveChangesAsync();
     }
 
