@@ -8,6 +8,7 @@ La interfaz genera:
 - Tabla de recorrido detallada, reiniciando cada token en `q0`.
 - Tabla de símbolos con identificadores únicos (`ID01`, `ID02`, etc.).
 - Lista de errores con línea y columna, sin detener el análisis posterior.
+- Carga y edición de programas `.txt`, con descarga del archivo de tokens únicamente cuando no existen errores léxicos.
 
 ## Ejecutar
 

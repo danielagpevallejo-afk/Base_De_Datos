@@ -24,9 +24,15 @@
     </div>
     <form method="post" id="validator-form" class="validator-form">
         <label asp-for="Cadena">Programa fuente</label>
-        <div class="input-row source-row">
+        <div class="source-editor-wrap">
             <textarea asp-for="Cadena" id="cadena" rows="5" autocomplete="off" spellcheck="false" placeholder="Ejemplo: START = VARIABLE&#10;AND _DANY2_" autofocus></textarea>
-            <button type="submit">Analizar programa</button>
+        </div>
+        <input type="file" id="program-file" accept=".txt,text/plain" hidden />
+        <div class="source-actions">
+            <button type="button" id="load-program" class="secondary-action">Cargar programa</button>
+            <button type="button" id="edit-program" class="secondary-action">Editar programa</button>
+            <button type="submit" class="primary-action">Guardar programa</button>
+            <span id="program-status" class="program-status" aria-live="polite">Escribe o carga un archivo .txt</span>
         </div>
     </form>
     <div class="examples" aria-label="Ejemplos rápidos">
@@ -66,7 +72,25 @@
         {
             <p class="inline-empty">No se encontraron tokens en el programa fuente.</p>
         }
+        <form method="post" asp-page-handler="DescargarTokens" class="token-download-form">
+            <input type="hidden" asp-for="Cadena" id="download-source" />
+            @if (Model.Resultado.Valido)
+            {
+                <button type="submit" id="download-tokens" class="download-action">Guardar archivo de tokens (.txt)</button>
+                <small id="download-help">El programa no contiene errores. El archivo está listo para guardarse.</small>
+            }
+            else
+            {
+                <button type="button" id="download-tokens" class="download-action" disabled>Guardar archivo de tokens (.txt)</button>
+                <small id="download-help">Corrige todos los errores y vuelve a guardar el programa para habilitar la descarga.</small>
+            }
+        </form>
     </section>
+
+    @if (Model.ArchivoMensaje is not null)
+    {
+        <p class="file-warning" role="alert">@Model.ArchivoMensaje</p>
+    }
 
     @if (Model.Resultado.Errores.Count > 0)
     {

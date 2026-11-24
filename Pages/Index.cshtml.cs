@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 using OllinLexer.Data;
 using OllinLexer.Services;
 
@@ -26,6 +27,7 @@ public class IndexModel : PageModel
     public int TotalEstados { get; private set; }
     public int TotalTransiciones { get; private set; }
     public string Proveedor { get; private set; } = "";
+    public string? ArchivoMensaje { get; private set; }
 
     public async Task OnGetAsync() => await LoadStatsAsync();
 
@@ -33,6 +35,31 @@ public class IndexModel : PageModel
     {
         Resultado = await automata.AnalizarAsync(Cadena);
         await LoadStatsAsync();
+    }
+
+    public async Task<IActionResult> OnPostDescargarTokensAsync()
+    {
+        Resultado = await automata.AnalizarAsync(Cadena);
+        if (!Resultado.Valido)
+        {
+            ArchivoMensaje = "No se puede guardar el archivo de tokens mientras el programa tenga errores léxicos.";
+            await LoadStatsAsync();
+            return Page();
+        }
+
+        var output = new StringBuilder();
+        output.AppendLine("ARCHIVO DE TOKENS - LENGUAJE OLLIN");
+        output.AppendLine("===================================");
+        foreach (var line in Resultado.Tokens.GroupBy(token => token.Linea).OrderBy(group => group.Key))
+            output.AppendLine($"{line.Key}\t{string.Join(" ", line.Select(token => token.Codigo))}");
+
+        output.AppendLine();
+        output.AppendLine("TABLA DE SÍMBOLOS");
+        output.AppendLine("ID\tNOMBRE\tTIPO DE DATO\tVALOR");
+        foreach (var symbol in Resultado.Simbolos)
+            output.AppendLine($"{symbol.Identificador}\t{symbol.Nombre}\t{symbol.TipoDato}\t{symbol.Valor}");
+
+        return File(Encoding.UTF8.GetBytes(output.ToString()), "text/plain; charset=utf-8", "archivo_tokens.txt");
     }
 
     private async Task LoadStatsAsync()
